@@ -1,0 +1,60 @@
+{
+  "name": "aws-rust-agent",
+  "description": "Specialized agent for AWS and Rust development",
+  "prompt": "file://./prompts/aws-rust-expert.md",
+  "mcpServers": {
+    "fetch": {
+      "command": "fetch-server",
+      "args": []
+    },
+    "git": {
+      "command": "git-mcp",
+      "args": []
+    }
+  },
+  "tools": [
+    "read",
+    "write",
+    "shell",
+    "aws",
+    "@git",
+    "@fetch/fetch_url"
+  ],
+  "toolAliases": {
+    "@git/git_status": "status",
+    "@fetch/fetch_url": "get"
+  },
+  "allowedTools": [
+    "read",
+    "@git/git_status"
+  ],
+  "toolsSettings": {
+    "write": {
+      "allowedPaths": ["src/**", "tests/**", "Cargo.toml"]
+    },
+    "aws": {
+      "allowedServices": ["s3", "lambda"],
+      "autoAllowReadonly": true
+    }
+  },
+  "resources": [
+    "file://README.md",
+    "file://docs/**/*.md"
+  ],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "git status"
+      }
+    ],
+    "postToolUse": [
+      {
+        "matcher": "fs_write",
+        "command": "cargo fmt --all"
+      }
+    ]
+  },
+  "model": "claude-sonnet-4",
+  "keyboardShortcut": "ctrl+shift+r",
+  "welcomeMessage": "Ready to help with AWS and Rust development!"
+}

@@ -1,0 +1,61 @@
+{
+  "name": "development-workflow-agent",
+  "description": "General development workflow custom agent with Git integration",
+  "prompt": "You are a software development assistant with expertise in Git workflows and code management",
+  "mcpServers": {
+    "git": {
+      "command": "git-mcp-server",
+      "args": [],
+      "timeout": 30000
+    }
+  },
+  "tools": [
+    "read",
+    "write",
+    "shell",
+    "@git"
+  ],
+  "allowedTools": [
+    "read",
+    "@git/git_status",
+    "@git/git_log",
+    "@git/git_diff"
+  ],
+  "toolAliases": {
+    "@git/git_status": "status",
+    "@git/git_log": "log",
+    "@git/git_diff": "diff"
+  },
+  "toolsSettings": {
+    "write": {
+      "allowedPaths": [
+        "src/**",
+        "tests/**",
+        "docs/**",
+        "*.md",
+        "*.json",
+        "package.json",
+        "requirements.txt"
+      ]
+    }
+  },
+  "resources": [
+    "file://README.md",
+    "file://CONTRIBUTING.md",
+    "file://docs/**/*.md",
+    "file://package.json",
+    "file://requirements.txt"
+  ],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "git status --porcelain",
+        "timeout_ms": 5000
+      },
+      {
+        "command": "git branch --show-current",
+        "timeout_ms": 3000
+      }
+    ]
+  }
+}

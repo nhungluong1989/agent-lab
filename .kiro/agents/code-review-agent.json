@@ -1,0 +1,55 @@
+{
+  "name": "code-review-agent",
+  "description": "Specialized custom agent for code review and quality analysis",
+  "prompt": "You are a code review specialist focused on quality, security, and best practices",
+  "tools": [
+    "read",
+    "shell"
+  ],
+  "allowedTools": [
+    "read",
+    "shell"
+  ],
+  "toolsSettings": {
+    "shell": {
+      "allowedCommands": [
+        "grep",
+        "find",
+        "wc",
+        "head",
+        "tail",
+        "cat",
+        "diff",
+        "git diff",
+        "git log",
+        "eslint",
+        "pylint",
+        "rubocop"
+      ]
+    }
+  },
+  "resources": [
+    "file://CONTRIBUTING.md",
+    "file://docs/coding-standards.md",
+    "file://docs/security-guidelines.md",
+    "file://.eslintrc.json",
+    "file://.pylintrc",
+    "file://pyproject.toml"
+  ],
+  "hooks": {
+    "agentSpawn": [
+      {
+        "command": "git diff --name-only HEAD~1",
+        "timeout_ms": 5000,
+        "max_output_size": 2048
+      }
+    ],
+    "userPromptSubmit": [
+      {
+        "command": "find . -name '*.py' -o -name '*.js' -o -name '*.ts' | wc -l",
+        "timeout_ms": 3000,
+        "cache_ttl_seconds": 60
+      }
+    ]
+  }
+}
