@@ -16,6 +16,14 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# SQLite database (ephemeral — regenerated at startup)
+*.db
+*.sqlite
+
+# Node
+node_modules/
+frontend/dist/
+
 # Distribution
 dist/
 build/
