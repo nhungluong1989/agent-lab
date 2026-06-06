@@ -14,7 +14,11 @@ class Settings(BaseSettings):
     # Groq
     GROQ_API_KEY: str = ""
 
-    # Gmail
+    # Email (Resend API — https://resend.com, free tier 3k emails/month)
+    RESEND_API_KEY: str = ""
+    EMAIL_FROM: str = "VN Real Estate <onboarding@resend.dev>"
+
+    # Gmail (legacy — not used on cloud deployments, SMTP is blocked by Render)
     GMAIL_USER: str = ""
     GMAIL_APP_PASSWORD: str = ""
 

@@ -1,43 +1,47 @@
 import logging
-import ssl
-import certifi
-import aiosmtplib
-from email.mime.multipart import MIMEMultipart
-from email.mime.text import MIMEText
+import httpx
 
 from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
+RESEND_API_URL = "https://api.resend.com/emails"
+
 
 async def send_email(to_address: str, subject: str, html_body: str, raise_on_error: bool = False) -> bool:
-    if not settings.GMAIL_USER or not settings.GMAIL_APP_PASSWORD:
-        msg = "Gmail not configured: GMAIL_USER or GMAIL_APP_PASSWORD is missing"
+    if not settings.RESEND_API_KEY:
+        msg = "RESEND_API_KEY is not configured"
         logger.warning(msg)
         if raise_on_error:
             raise ValueError(msg)
         return False
 
-    message = MIMEMultipart("alternative")
-    message["Subject"] = subject
-    message["From"] = settings.GMAIL_USER
-    message["To"] = to_address
-    message.attach(MIMEText(html_body, "html", "utf-8"))
-
-    ssl_ctx = ssl.create_default_context(cafile=certifi.where())
+    payload = {
+        "from": settings.EMAIL_FROM,
+        "to": [to_address],
+        "subject": subject,
+        "html": html_body,
+    }
 
     try:
-        await aiosmtplib.send(
-            message,
-            hostname="smtp.gmail.com",
-            port=587,
-            start_tls=True,
-            tls_context=ssl_ctx,
-            username=settings.GMAIL_USER,
-            password=settings.GMAIL_APP_PASSWORD,
-        )
+        async with httpx.AsyncClient(timeout=15) as client:
+            resp = await client.post(
+                RESEND_API_URL,
+                headers={
+                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json=payload,
+            )
+            resp.raise_for_status()
         logger.info(f"Email sent to {to_address}: {subject}")
         return True
+    except httpx.HTTPStatusError as e:
+        error = f"Resend API error {e.response.status_code}: {e.response.text}"
+        logger.error(f"Email send failed to {to_address}: {error}")
+        if raise_on_error:
+            raise ValueError(error)
+        return False
     except Exception as e:
         logger.error(f"Email send failed to {to_address}: {e}")
         if raise_on_error:
