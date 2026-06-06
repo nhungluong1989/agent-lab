@@ -10,22 +10,25 @@ from backend.config import settings
 logger = logging.getLogger(__name__)
 
 
-async def send_email(to_address: str, subject: str, html_body: str) -> bool:
+async def send_email(to_address: str, subject: str, html_body: str, raise_on_error: bool = False) -> bool:
     if not settings.GMAIL_USER or not settings.GMAIL_APP_PASSWORD:
-        logger.warning("Gmail not configured, skipping email")
+        msg = "Gmail not configured: GMAIL_USER or GMAIL_APP_PASSWORD is missing"
+        logger.warning(msg)
+        if raise_on_error:
+            raise ValueError(msg)
         return False
 
-    msg = MIMEMultipart("alternative")
-    msg["Subject"] = subject
-    msg["From"] = settings.GMAIL_USER
-    msg["To"] = to_address
-    msg.attach(MIMEText(html_body, "html", "utf-8"))
+    message = MIMEMultipart("alternative")
+    message["Subject"] = subject
+    message["From"] = settings.GMAIL_USER
+    message["To"] = to_address
+    message.attach(MIMEText(html_body, "html", "utf-8"))
 
     ssl_ctx = ssl.create_default_context(cafile=certifi.where())
 
     try:
         await aiosmtplib.send(
-            msg,
+            message,
             hostname="smtp.gmail.com",
             port=587,
             start_tls=True,
@@ -37,6 +40,8 @@ async def send_email(to_address: str, subject: str, html_body: str) -> bool:
         return True
     except Exception as e:
         logger.error(f"Email send failed to {to_address}: {e}")
+        if raise_on_error:
+            raise
         return False
 
 

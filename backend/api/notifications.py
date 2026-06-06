@@ -55,7 +55,7 @@ async def send_test_notification(
         summary = await generate_daily_summary(current_user.role, db)
         subject = f"[{current_user.role.capitalize()}] VN Real Estate Daily Insight — {date_str}"
         html = build_notification_html(current_user.username, current_user.role, summary, date_str)
-        success = await send_email(current_user.email, subject, html)
+        success = await send_email(current_user.email, subject, html, raise_on_error=True)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Notification error: {str(e)}")
 
