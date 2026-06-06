@@ -1,12 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Bell, Send, CheckCircle, XCircle, Clock } from 'lucide-react'
-import { notificationsApi } from '../services/api'
+import { Bell, BellOff, Send, CheckCircle, XCircle, Clock } from 'lucide-react'
+import { notificationsApi, authApi } from '../services/api'
+import useAuthStore from '../store/authStore'
 
 export default function NotificationsPage() {
+  const { user, updateUser } = useAuthStore()
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
+  const [toggling, setToggling] = useState(false)
   const [msg, setMsg] = useState(null)
+
+  const subscribed = user?.email_notifications ?? false
 
   const fetchLogs = () => {
     setLoading(true)
@@ -16,6 +21,25 @@ export default function NotificationsPage() {
   }
 
   useEffect(() => { fetchLogs() }, [])
+
+  const toggleSubscription = async () => {
+    setToggling(true)
+    try {
+      const res = await authApi.updateMe({ email_notifications: !subscribed })
+      updateUser(res.data)
+      setMsg({
+        type: 'success',
+        text: res.data.email_notifications
+          ? 'Subscribed! You will receive daily insights at 07:00 Vietnam time.'
+          : 'Unsubscribed. You will no longer receive daily emails.',
+      })
+    } catch {
+      setMsg({ type: 'error', text: 'Failed to update subscription.' })
+    } finally {
+      setToggling(false)
+      setTimeout(() => setMsg(null), 4000)
+    }
+  }
 
   const sendTest = async () => {
     setSending(true)
@@ -44,19 +68,52 @@ export default function NotificationsPage() {
           <Bell size={20} className="text-blue-500" /> Email Notifications
         </h1>
         <p className="text-gray-400 text-sm mt-1">
-          Daily market insight emails sent to your registered address at <span className="font-medium text-gray-600">07:00 Vietnam time</span>
+          Daily market insight emails sent to <span className="font-medium text-gray-600">{user?.email}</span> at{' '}
+          <span className="font-medium text-gray-600">07:00 Vietnam time</span>
         </p>
+      </div>
+
+      {/* Subscribe toggle */}
+      <div className={`rounded-xl border-2 p-5 flex items-center justify-between transition-colors ${
+        subscribed ? 'border-green-200 bg-green-50' : 'border-gray-200 bg-gray-50'
+      }`}>
+        <div className="flex items-center gap-3">
+          {subscribed
+            ? <Bell size={22} className="text-green-600" />
+            : <BellOff size={22} className="text-gray-400" />}
+          <div>
+            <div className={`font-semibold ${subscribed ? 'text-green-800' : 'text-gray-600'}`}>
+              {subscribed ? 'Subscribed to daily insights' : 'Not subscribed'}
+            </div>
+            <div className="text-xs text-gray-400 mt-0.5">
+              {subscribed
+                ? 'You receive daily real estate analytics every morning.'
+                : 'Subscribe to get AI-generated market insights in your inbox.'}
+            </div>
+          </div>
+        </div>
+        <button
+          onClick={toggleSubscription}
+          disabled={toggling}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-50 ${
+            subscribed
+              ? 'bg-white border border-gray-200 text-gray-600 hover:border-red-300 hover:text-red-600'
+              : 'bg-green-600 hover:bg-green-700 text-white'
+          }`}
+        >
+          {toggling ? 'Saving…' : subscribed ? 'Unsubscribe' : 'Subscribe'}
+        </button>
       </div>
 
       {/* Test button */}
       <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5 flex items-center justify-between">
         <div>
           <div className="font-medium text-gray-800">Send a test email now</div>
-          <div className="text-xs text-gray-400 mt-0.5">Triggers an immediate insight email to your account's registered address</div>
+          <div className="text-xs text-gray-400 mt-0.5">Sends an immediate insight email to your registered address</div>
         </div>
         <button
           onClick={sendTest}
-          disabled={sending}
+          disabled={sending || !subscribed}
           className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-50 transition-colors"
         >
           <Send size={14} />
