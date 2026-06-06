@@ -24,8 +24,9 @@ export default function NotificationsPage() {
       await notificationsApi.sendTest()
       setMsg({ type: 'success', text: 'Test email triggered — check your inbox in ~30 seconds.' })
       setTimeout(fetchLogs, 5000)
-    } catch {
-      setMsg({ type: 'error', text: 'Failed to trigger test email.' })
+    } catch (err) {
+      const detail = err.response?.data?.detail || 'Failed to send test email.'
+      setMsg({ type: 'error', text: detail })
     } finally {
       setSending(false)
     }
@@ -43,7 +44,7 @@ export default function NotificationsPage() {
           <Bell size={20} className="text-blue-500" /> Email Notifications
         </h1>
         <p className="text-gray-400 text-sm mt-1">
-          Daily market insight emails sent to your registered address at <span className="font-medium text-gray-600">23:45 Vietnam time</span>
+          Daily market insight emails sent to your registered address at <span className="font-medium text-gray-600">07:00 Vietnam time</span>
         </p>
       </div>
 
