@@ -213,21 +213,31 @@ async def get_market_summary(db: AsyncSession = Depends(get_db)):
         select(func.count(PropertyListing.id)).where(PropertyListing.crawled_at >= since)
     )).scalar_one()
 
-    avg_pm2 = (await db.execute(
-        select(func.avg(PropertyListing.price_per_m2)).where(
-            PropertyListing.listing_type == "sale",
-            PropertyListing.price_per_m2 > 0,
-            PropertyListing.crawled_at >= since,
-        )
-    )).scalar_one()
+    PROP_TYPES = ["apartment", "house", "villa", "land"]
 
-    avg_rent = (await db.execute(
-        select(func.avg(PropertyListing.price)).where(
-            PropertyListing.listing_type == "rent",
-            PropertyListing.price > 0,
-            PropertyListing.crawled_at >= since,
-        )
-    )).scalar_one()
+    sale_by_type = {}
+    for pt in PROP_TYPES:
+        val = (await db.execute(
+            select(func.avg(PropertyListing.price_per_m2)).where(
+                PropertyListing.listing_type == "sale",
+                PropertyListing.property_type == pt,
+                PropertyListing.price_per_m2 > 0,
+                PropertyListing.crawled_at >= since,
+            )
+        )).scalar_one()
+        sale_by_type[pt] = round(val, 0) if val else None
+
+    rent_by_type = {}
+    for pt in ["apartment", "house", "room"]:
+        val = (await db.execute(
+            select(func.avg(PropertyListing.price)).where(
+                PropertyListing.listing_type == "rent",
+                PropertyListing.property_type == pt,
+                PropertyListing.price > 0,
+                PropertyListing.crawled_at >= since,
+            )
+        )).scalar_one()
+        rent_by_type[pt] = round(val, 0) if val else None
 
     all_scores = (await db.execute(select(InvestmentScore))).scalars().all()
     latest_by_district: dict = {}
@@ -241,8 +251,8 @@ async def get_market_summary(db: AsyncSession = Depends(get_db)):
 
     return {
         "total_listings": total_listings,
-        "city_avg_price_per_m2": round(avg_pm2, 0) if avg_pm2 else None,
-        "city_avg_rental_monthly": round(avg_rent, 0) if avg_rent else None,
+        "sale_price_by_type": sale_by_type,
+        "rent_by_type": rent_by_type,
         "districts_scored": len(latest_by_district),
         "recommendation_breakdown": recs,
         "last_updated": datetime.utcnow().isoformat(),

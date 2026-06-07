@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from 'react'
 import { analyticsApi, listingsApi } from '../services/api'
-import { TrendingUp, Home, DollarSign, MapPin, Award, RefreshCw } from 'lucide-react'
+import { TrendingUp, Home, DollarSign, MapPin, Award, RefreshCw, Building2 } from 'lucide-react'
 
 const REC_COLORS = {
   strong_buy: 'bg-green-100 text-green-800',
@@ -13,6 +13,14 @@ const REC_LABELS = {
   buy: 'Buy',
   hold: 'Hold',
   avoid: 'Avoid',
+}
+
+const PROP_TYPE_LABELS = {
+  apartment: 'Apartment',
+  house: 'House',
+  villa: 'Villa',
+  land: 'Land',
+  room: 'Room',
 }
 
 function ScoreBar({ value, color = 'bg-blue-500' }) {
@@ -55,7 +63,6 @@ export default function DashboardPage() {
       setRefreshing(true)
       setRefreshMsg('Crawling latest data from Chotot...')
       await analyticsApi.triggerRefresh()
-
       pollRef.current = setInterval(async () => {
         const { data } = await analyticsApi.getRefreshStatus()
         if (!data.running) {
@@ -81,8 +88,11 @@ export default function DashboardPage() {
     <div className="flex items-center justify-center h-64 text-gray-400">Loading market data...</div>
   )
 
-  const fmtM = (n) => n ? `${(n / 1_000_000).toFixed(0)} triệu/m²` : '—'
-  const fmtRent = (n) => n ? `${(n / 1_000_000).toFixed(1)}M/tháng` : '—'
+  const fmtM = (n) => n ? `${(n / 1_000_000).toFixed(0)}M` : '—'
+  const fmtRent = (n) => n ? `${(n / 1_000_000).toFixed(1)}M` : '—'
+
+  const saleTypes = ['apartment', 'house', 'villa', 'land']
+  const rentTypes = ['apartment', 'house', 'room']
 
   return (
     <div className="space-y-6">
@@ -110,24 +120,83 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {[
-          { icon: Home, color: 'text-blue-600', label: 'Total Listings', value: listingSummary?.total_listings?.toLocaleString() ?? '—', sub: `${listingSummary?.sale_listings?.toLocaleString() ?? 0} sale · ${listingSummary?.rent_listings?.toLocaleString() ?? 0} rent` },
-          { icon: DollarSign, color: 'text-purple-600', label: 'Avg Sale Price', value: fmtM(summary?.city_avg_price_per_m2), sub: 'City-wide average' },
-          { icon: TrendingUp, color: 'text-green-600', label: 'Avg Rental', value: fmtRent(summary?.city_avg_rental_monthly), sub: 'Monthly average' },
-          { icon: MapPin, color: 'text-orange-600', label: 'Provinces Scored', value: summary?.districts_scored ?? '—', sub: `${summary?.recommendation_breakdown?.strong_buy ?? 0} strong buy · ${summary?.recommendation_breakdown?.buy ?? 0} buy` },
-        ].map(({ icon: Icon, color, label, value, sub }) => (
-          <div key={label} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div className={`flex items-center gap-2 ${color} mb-2`}>
-              <Icon size={18} />
-              <span className="text-xs font-medium uppercase tracking-wide">{label}</span>
-            </div>
-            <div className="text-2xl font-bold text-gray-900">{value}</div>
-            <div className="text-xs text-gray-400 mt-1">{sub}</div>
+      {/* Summary cards */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 text-blue-600 mb-2">
+            <Home size={18} />
+            <span className="text-xs font-medium uppercase tracking-wide">Total Listings</span>
           </div>
-        ))}
+          <div className="text-2xl font-bold text-gray-900">{listingSummary?.total_listings?.toLocaleString() ?? '—'}</div>
+          <div className="text-xs text-gray-400 mt-1">
+            {listingSummary?.sale_listings?.toLocaleString() ?? 0} sale · {listingSummary?.rent_listings?.toLocaleString() ?? 0} rent
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 text-orange-600 mb-2">
+            <MapPin size={18} />
+            <span className="text-xs font-medium uppercase tracking-wide">Provinces Scored</span>
+          </div>
+          <div className="text-2xl font-bold text-gray-900">{summary?.districts_scored ?? '—'}</div>
+          <div className="text-xs text-gray-400 mt-1">
+            {summary?.recommendation_breakdown?.strong_buy ?? 0} strong buy · {summary?.recommendation_breakdown?.buy ?? 0} buy
+          </div>
+        </div>
+        <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-100 col-span-2 md:col-span-1">
+          <div className="flex items-center gap-2 text-purple-600 mb-2">
+            <TrendingUp size={18} />
+            <span className="text-xs font-medium uppercase tracking-wide">Market Signal</span>
+          </div>
+          <div className="flex gap-2 flex-wrap mt-1">
+            {Object.entries(summary?.recommendation_breakdown ?? {}).map(([rec, count]) => (
+              <span key={rec} className={`px-2 py-0.5 rounded-full text-xs font-medium ${REC_COLORS[rec]}`}>
+                {REC_LABELS[rec]}: {count}
+              </span>
+            ))}
+          </div>
+        </div>
       </div>
 
+      {/* Price breakdown by property type */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-4 border-b border-gray-100 flex items-center gap-2">
+            <DollarSign size={18} className="text-purple-500" />
+            <h2 className="font-semibold text-gray-800 text-sm">Avg Sale Price / m²</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {saleTypes.map(pt => (
+              <div key={pt} className="px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-gray-600 capitalize">{PROP_TYPE_LABELS[pt]}</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {fmtM(summary?.sale_price_by_type?.[pt])}
+                  {summary?.sale_price_by_type?.[pt] ? <span className="text-xs text-gray-400 font-normal"> /m²</span> : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
+          <div className="p-4 border-b border-gray-100 flex items-center gap-2">
+            <Building2 size={18} className="text-green-500" />
+            <h2 className="font-semibold text-gray-800 text-sm">Avg Rental / Month</h2>
+          </div>
+          <div className="divide-y divide-gray-50">
+            {rentTypes.map(pt => (
+              <div key={pt} className="px-4 py-3 flex items-center justify-between">
+                <span className="text-sm text-gray-600 capitalize">{PROP_TYPE_LABELS[pt]}</span>
+                <span className="text-sm font-semibold text-gray-900">
+                  {fmtRent(summary?.rent_by_type?.[pt])}
+                  {summary?.rent_by_type?.[pt] ? <span className="text-xs text-gray-400 font-normal"> /tháng</span> : ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Top opportunities table */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100">
         <div className="p-4 border-b border-gray-100 flex items-center gap-2">
           <Award size={18} className="text-yellow-500" />
