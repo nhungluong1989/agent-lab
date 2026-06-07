@@ -14,13 +14,10 @@ class Settings(BaseSettings):
     # Groq
     GROQ_API_KEY: str = ""
 
-    # Email (Resend API — https://resend.com, free tier 3k emails/month)
-    RESEND_API_KEY: str = ""
-    EMAIL_FROM: str = "onboarding@resend.dev"
-
-    # Gmail (legacy — not used on cloud deployments, SMTP is blocked by Render)
-    GMAIL_USER: str = ""
-    GMAIL_APP_PASSWORD: str = ""
+    # Email (Brevo API — https://brevo.com, free tier 300 emails/day, send to anyone)
+    BREVO_API_KEY: str = ""
+    EMAIL_FROM_NAME: str = "VN Real Estate Intelligence"
+    EMAIL_FROM_ADDRESS: str = ""
 
     # Schedules
     CRAWL_SCHEDULE_HOUR: int = 7

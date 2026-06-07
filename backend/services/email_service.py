@@ -5,30 +5,40 @@ from backend.config import settings
 
 logger = logging.getLogger(__name__)
 
-RESEND_API_URL = "https://api.resend.com/emails"
+BREVO_API_URL = "https://api.brevo.com/v3/smtp/email"
 
 
 async def send_email(to_address: str, subject: str, html_body: str, raise_on_error: bool = False) -> bool:
-    if not settings.RESEND_API_KEY:
-        msg = "RESEND_API_KEY is not configured"
+    if not settings.BREVO_API_KEY:
+        msg = "BREVO_API_KEY is not configured"
+        logger.warning(msg)
+        if raise_on_error:
+            raise ValueError(msg)
+        return False
+
+    if not settings.EMAIL_FROM_ADDRESS:
+        msg = "EMAIL_FROM_ADDRESS is not configured"
         logger.warning(msg)
         if raise_on_error:
             raise ValueError(msg)
         return False
 
     payload = {
-        "from": settings.EMAIL_FROM,
-        "to": [to_address],
+        "sender": {
+            "name": settings.EMAIL_FROM_NAME,
+            "email": settings.EMAIL_FROM_ADDRESS,
+        },
+        "to": [{"email": to_address}],
         "subject": subject,
-        "html": html_body,
+        "htmlContent": html_body,
     }
 
     try:
         async with httpx.AsyncClient(timeout=15) as client:
             resp = await client.post(
-                RESEND_API_URL,
+                BREVO_API_URL,
                 headers={
-                    "Authorization": f"Bearer {settings.RESEND_API_KEY}",
+                    "api-key": settings.BREVO_API_KEY,
                     "Content-Type": "application/json",
                 },
                 json=payload,
@@ -37,7 +47,7 @@ async def send_email(to_address: str, subject: str, html_body: str, raise_on_err
         logger.info(f"Email sent to {to_address}: {subject}")
         return True
     except httpx.HTTPStatusError as e:
-        error = f"Resend API error {e.response.status_code}: {e.response.text}"
+        error = f"Brevo API error {e.response.status_code}: {e.response.text}"
         logger.error(f"Email send failed to {to_address}: {error}")
         if raise_on_error:
             raise ValueError(error)
